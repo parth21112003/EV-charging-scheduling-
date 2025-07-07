@@ -150,7 +150,7 @@ class RealTimeEVOptimizer:
         # Generate 30 days of hourly data
         start_date = datetime.now() - timedelta(days=30)
         end_date = datetime.now()
-        timestamps = pd.date_range(start=start_date, end=end_date, freq='H')
+        timestamps = pd.date_range(start=start_date, end=end_date, freq='h')
         
         np.random.seed(42)
         hours = len(timestamps)
@@ -309,10 +309,19 @@ class RealTimeEVOptimizer:
             peak_hours.append((start_idx, end_idx))
         
         return peak_hours, smoothed_forecast
+    
+    def update_forecast_and_schedule(self):
+        print("Generating new forecast...")
+        forecast = self.model_manager.predict_next_24_hours()
+        schedule = self.optimize_charging_schedule(forecast)
+        self.current_forecast = forecast
+        self.current_schedule = schedule
+        self.last_update = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"Forecast updated at {self.last_update}")
+
 
     def optimize_charging_schedule(self, forecast):
-        """Generate optimized charging schedule based on forecasts and peak hours"""
-        # Initialize schedule for next 24 hours
+
         current_time = datetime.now()
         schedule = pd.DataFrame()
         schedule['timestamp'] = pd.date_range(
@@ -320,68 +329,125 @@ class RealTimeEVOptimizer:
             periods=len(forecast),
             freq='h'
         )
-        
-        # Get confirmed bookings for the forecast period
-        confirmed_bookings = self.pre_booking_manager.get_confirmed_bookings()
-        confirmed_bookings = confirmed_bookings[
-            (confirmed_bookings['start_time'] >= schedule['timestamp'].iloc[0]) &
-            (confirmed_bookings['end_time'] <= schedule['timestamp'].iloc[-1])
+
+        schedule['vehicle_id'] = [[] for _ in range(len(schedule))]
+        all_bookings = self.pre_booking_manager.pre_bookings
+        bookings_in_window = all_bookings[
+            (all_bookings['end_time'] > schedule['timestamp'].iloc[0]) &
+            (all_bookings['start_time'] < schedule['timestamp'].iloc[-1])
         ]
-        
-        # Initialize charging power for each hour
+
         schedule['forecasted_demand'] = forecast
         schedule['available_capacity'] = config.GRID_CAPACITY * config.SAFETY_MARGIN - forecast
-        schedule['charging_power'] = 0
+        schedule['charging_power'] = 0.0  # Ensure float
         schedule['is_peak_hour'] = False
-        
+
         # Mark peak hours
         peak_hours, _ = self.identify_peak_hours(forecast)
         for start_hour, end_hour in peak_hours:
             for i in range(start_hour, min(end_hour + 1, len(schedule))):
                 if i < len(schedule):
                     schedule.loc[i, 'is_peak_hour'] = True
-        
-        # Allocate charging power to bookings (avoid peak hours when possible)
-        for _, booking in confirmed_bookings.iterrows():
+
+        for idx, booking in bookings_in_window.iterrows():
             booking_hours = schedule[
                 (schedule['timestamp'] >= booking['start_time']) &
                 (schedule['timestamp'] < booking['end_time'])
             ]
-            
+            allotted = False
+            allotted_indices = []
+
             if len(booking_hours) > 0:
-                # Calculate required power per hour
                 required_power = booking['required_charge'] / len(booking_hours)
-                
-                # Prioritize non-peak hours
                 non_peak_hours = booking_hours[~booking_hours['is_peak_hour']]
                 peak_hours_in_booking = booking_hours[booking_hours['is_peak_hour']]
-                
+
                 # Allocate to non-peak hours first
-                for idx in non_peak_hours.index:
-                    if schedule.loc[idx, 'available_capacity'] > 0:
+                for idx2 in non_peak_hours.index:
+                    if schedule.loc[idx2, 'available_capacity'] > 0:
                         power_to_allocate = min(
                             required_power,
-                            schedule.loc[idx, 'available_capacity'],
+                            schedule.loc[idx2, 'available_capacity'],
                             config.MAX_CHARGING_POWER
                         )
-                        schedule.loc[idx, 'charging_power'] += power_to_allocate
-                        schedule.loc[idx, 'available_capacity'] -= power_to_allocate
-                
+                        if power_to_allocate > 0:
+                            allotted = True
+                            allotted_indices.append(idx2)
+                            schedule.loc[idx2, 'charging_power'] += power_to_allocate
+                            schedule.loc[idx2, 'available_capacity'] -= power_to_allocate
+                            schedule.at[idx2, 'vehicle_id'].append(booking['vehicle_id'])
+
                 # If still need power, allocate to peak hours
-                remaining_power = required_power * len(booking_hours) - schedule.loc[booking_hours.index, 'charging_power'].sum()
+                remaining_power = booking['required_charge'] - schedule.loc[booking_hours.index, 'charging_power'].sum()
                 if remaining_power > 0:
-                    for idx in peak_hours_in_booking.index:
-                        if schedule.loc[idx, 'available_capacity'] > 0 and remaining_power > 0:
+                    for idx2 in peak_hours_in_booking.index:
+                        if schedule.loc[idx2, 'available_capacity'] > 0 and remaining_power > 0:
                             power_to_allocate = min(
                                 remaining_power,
-                                schedule.loc[idx, 'available_capacity'],
+                                schedule.loc[idx2, 'available_capacity'],
                                 config.MAX_CHARGING_POWER
                             )
-                            schedule.loc[idx, 'charging_power'] += power_to_allocate
-                            schedule.loc[idx, 'available_capacity'] -= power_to_allocate
-                            remaining_power -= power_to_allocate
-        
+                            if power_to_allocate > 0:
+                                allotted = True
+                                allotted_indices.append(idx2)
+                                schedule.loc[idx2, 'charging_power'] += power_to_allocate
+                                schedule.loc[idx2, 'available_capacity'] -= power_to_allocate
+                                schedule.at[idx2, 'vehicle_id'].append(booking['vehicle_id'])
+                                remaining_power -= power_to_allocate
+
+            # If still not allotted, try nearest time-minimized fallback
+            if not allotted:
+                duration = int((booking['end_time'] - booking['start_time']).total_seconds() // 3600)
+                required_per_hour = booking['required_charge'] / max(1, duration)
+                candidates = []
+
+                for i in range(len(schedule) - duration + 1):
+                    block = schedule.iloc[i:i + duration]
+                    block_start = block['timestamp'].iloc[0]
+                    block_end = block['timestamp'].iloc[-1]
+
+                    if all(block['available_capacity'] >= required_per_hour):
+                        is_non_peak = all(~block['is_peak_hour'])
+
+                        # Compute time gap (in seconds) to requested window
+                        dist = min(
+                            abs((block_start - booking['start_time']).total_seconds()),
+                            abs((block_end - booking['end_time']).total_seconds())
+                        )
+
+                        candidates.append({
+                            "indices": block.index,
+                            "distance": dist,
+                            "non_peak": is_non_peak
+                        })
+
+                # Sort: non-peak first, then by smallest time difference
+                candidates.sort(key=lambda x: (not x['non_peak'], x['distance']))
+
+                for block in candidates:
+                    for idx2 in block['indices']:
+                        power_to_allocate = min(
+                            required_per_hour,
+                            schedule.loc[idx2, 'available_capacity'],
+                            config.MAX_CHARGING_POWER
+                        )
+                        if power_to_allocate > 0:
+                            allotted = True
+                            allotted_indices.append(idx2)
+                            schedule.loc[idx2, 'charging_power'] += power_to_allocate
+                            schedule.loc[idx2, 'available_capacity'] -= power_to_allocate
+                            schedule.at[idx2, 'vehicle_id'].append(booking['vehicle_id'])
+                    if allotted:
+                        break
+
+            # Final booking status
+            if allotted:
+                self.pre_booking_manager.update_booking_status(idx, 'confirmed')
+            else:
+                self.pre_booking_manager.update_booking_status(idx, 'pending')
+
         return schedule
+
 
     def update_forecast_and_schedule(self):
         """Update forecast and schedule with current data"""
@@ -544,6 +610,69 @@ def update_data():
         return jsonify({'status': 'success', 'message': 'Data updated successfully'})
     else:
         return jsonify({'status': 'error', 'message': 'Failed to update data'}), 500
+
+@app.route('/api/bookings')
+def get_bookings():
+    """API endpoint to get all pre-bookings and their allotted times, with reason if not allotted"""
+    bookings = optimizer.pre_booking_manager.pre_bookings.copy()
+    allotted = {}
+    reason = {}
+
+    if optimizer.current_schedule is not None:
+        schedule = optimizer.current_schedule
+
+        for idx, booking in bookings.iterrows():
+            # SAFELY match vehicle_id in schedule (ensure list, check presence)
+            matched = schedule[
+                schedule['vehicle_id'].map(lambda v: isinstance(v, list) and booking['vehicle_id'] in v)
+            ]
+
+            if not matched.empty:
+                # Return ALL matched time slots
+                first_time = matched['timestamp'].iloc[0].strftime('%Y-%m-%d %H:%M')
+                allotted[idx] = [first_time]
+
+            else:
+                allotted[idx] = []
+
+                # Reason logic
+                if booking['status'] == 'confirmed':
+                    reason[idx] = 'allotted'
+                elif booking['status'] == 'pending':
+                    schedule_start = schedule['timestamp'].iloc[0]
+                    schedule_end = schedule['timestamp'].iloc[-1]
+                    if booking['end_time'] <= schedule_start or booking['start_time'] >= schedule_end:
+                        reason[idx] = 'out of schedule window'
+                    else:
+                        booking_hours = schedule[
+                            (schedule['timestamp'] >= booking['start_time']) &
+                            (schedule['timestamp'] < booking['end_time'])
+                        ]
+                        if len(booking_hours) == 0:
+                            reason[idx] = 'out of schedule window'
+                        elif all(booking_hours['available_capacity'] < booking['required_charge'] / max(1, len(booking_hours))):
+                            reason[idx] = 'no available capacity in requested window'
+                        else:
+                            reason[idx] = 'no available contiguous block'
+                else:
+                    reason[idx] = '-'
+
+    booking_list = []
+    for idx, row in bookings.iterrows():
+        booking_info = {
+            'vehicle_id': row['vehicle_id'],
+            'station_id': row['station_id'],
+            'requested_start': row['start_time'].strftime('%Y-%m-%d %H:%M'),
+            'requested_end': row['end_time'].strftime('%Y-%m-%d %H:%M'),
+            'required_charge': row['required_charge'],
+            'status': row['status'],
+            'allotted_times': allotted.get(idx, []),
+            'reason': reason.get(idx, '-')
+        }
+        booking_list.append(booking_info)
+
+    return jsonify({'bookings': booking_list})
+
 
 def background_updater():
     """Background thread to update data every 15 minutes"""
