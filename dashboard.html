@@ -8,185 +8,235 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+          font-family: 'Inter', sans-serif;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          margin: 0;
+          padding: 20px;
+          min-height: 100vh;
+          color: #2c3e50;
         }
-        
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
+          max-width: 1400px;
+          margin: auto;
+          background: #fff;
+          border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
         }
-        
         .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
+          background: linear-gradient(135deg, #2c3e50, #34495e);
+          color: white;
+          padding: 30px;
+          text-align: center;
         }
-        
         .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: 300;
+          font-size: 2.8em;
+          font-weight: 600;
+          margin: 0 0 10px;
         }
-        
         .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.8;
+          font-size: 1em;
+          opacity: 0.85;
         }
-        
         .status-bar {
-            background: #ecf0f1;
-            padding: 15px 20px;
-            border-bottom: 1px solid #bdc3c7;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+          background: #ecf0f1;
+          padding: 15px 25px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #bdc3c7;
         }
-        
         .last-update {
-            font-size: 0.9em;
-            color: #7f8c8d;
+          font-size: 0.9em;
+          color: #7f8c8d;
         }
-        
+        .update-btn, #bookings-btn {
+          border: none;
+          cursor: pointer;
+          font-size: 1em;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          border-radius: 8px;
+          padding: 12px 28px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
         .update-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
+          background: linear-gradient(135deg, #3498db, #2980b9);
+          color: #fff;
         }
-        
         .update-btn:hover {
-            background: #2980b9;
+          background: linear-gradient(135deg, #4aa3e1, #3498db);
+          transform: translateY(-1px);
         }
-        
+        #bookings-btn {
+          background: linear-gradient(135deg, #9b59b6, #8e44ad);
+          color: #fff;
+          margin-left: 10px;
+        }
+        #bookings-btn:hover {
+          background: linear-gradient(135deg, #b96fd8, #9b59b6);
+          transform: translateY(-1px);
+        }
         .content {
-            padding: 20px;
+          padding: 30px;
         }
-        
         .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-bottom: 30px;
         }
-        
         .card {
-            background: white;
-            border: 1px solid #e1e8ed;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          background: #fdfdfd;
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+          text-align: center;
         }
-        
         .card h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+          font-size: 0.95em;
+          text-transform: uppercase;
+          color: #7f8c8d;
+          margin: 0 0 10px;
         }
-        
         .card .value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #3498db;
+          font-size: 2.2em;
+          font-weight: bold;
+          color: #3498db;
         }
-        
         .card .unit {
-            font-size: 0.8em;
-            color: #7f8c8d;
+          font-size: 0.8em;
+          color: #95a5a6;
         }
-        
         .charts-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
         }
-        
-        .chart {
-            background: white;
-            border: 1px solid #e1e8ed;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .chart, .peak-hours-section {
+          background: #fff;
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
         }
-        
-        .chart h3 {
-            margin: 0 0 20px 0;
-            color: #2c3e50;
-            text-align: center;
+        .chart h3, .peak-hours-section h3 {
+          text-align: center;
+          font-size: 1.2em;
+          margin-bottom: 20px;
+          color: #2c3e50;
         }
-        
-        .peak-hours-section {
-            background: white;
-            border: 1px solid #e1e8ed;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .peak-hours-section h3 {
-            margin: 0 0 20px 0;
-            color: #2c3e50;
-            text-align: center;
-        }
-        
         .peak-hours-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 12px;
         }
-        
         .peak-hour-item {
-            background: #e74c3c;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
+          background: #e74c3c;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 50px;
+          font-size: 0.9em;
+          font-weight: bold;
         }
-        
         .loading {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
+          text-align: center;
+          padding: 30px;
+          color: #7f8c8d;
         }
-        
         .error {
-            background: #e74c3c;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-            text-align: center;
+          background: #e74c3c;
+          color: white;
+          padding: 15px;
+          border-radius: 8px;
+          margin: 20px 0;
+          text-align: center;
         }
-        
+        #bookings-modal {
+          background: rgba(44, 62, 80, 0.7);
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          display: none;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 40px 20px;
+          z-index: 1000;
+        }
+        #bookings-modal > div {
+          background: #fff;
+          border-radius: 12px;
+          max-width: 1000px;
+          width: 100%;
+          padding: 30px;
+          position: relative;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        #bookings-modal h2 {
+          margin-top: 0;
+          text-align: center;
+          color: #8e44ad;
+        }
+        #bookings-modal button {
+          position: absolute;
+          top: 12px;
+          right: 20px;
+          font-size: 1.5em;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #8e44ad;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        table th, table td {
+          padding: 12px;
+          text-align: center;
+          border: 1px solid #ddd;
+        }
+        table th {
+          background: #8e44ad;
+          color: white;
+          font-weight: 600;
+        }
         @media (max-width: 768px) {
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
+          .charts-container {
+            grid-template-columns: 1fr;
+          }
+          .summary-cards {
+            grid-template-columns: 1fr 1fr;
+          }
         }
-    </style>
+      </style>
 </head>
 <body>
+    <script>
+        function animateValue(id, start, end, duration) {
+            const el = document.getElementById(id);
+            const range = end - start;
+            const steps = Math.ceil(duration / 20);
+            let currentStep = 0;
+
+            const timer = setInterval(() => {
+                currentStep++;
+                const progress = currentStep / steps;
+                const value = start + range * progress;
+                el.textContent = value.toFixed(1);
+
+                if (currentStep >= steps) {
+                    clearInterval(timer);
+                    el.textContent = end.toFixed(1);  // Snap to final value
+                }
+            }, 20);
+        }
+        </script>
     <div class="container">
         <div class="header">
             <h1>⚡ EV Charging Real-Time Dashboard</h1>
@@ -198,7 +248,9 @@
                 Last Update: <span id="last-update">Loading...</span>
             </div>
             <button class="update-btn" onclick="updateData()">🔄 Update Now</button>
-        </div>
+            <button class="update-btn" id="bookings-btn" onclick="showBookingsModal()">📋 Bookings</button>
+
+            </div>
         
         <div class="content">
             <div class="summary-cards">
@@ -249,33 +301,52 @@
         </div>
     </div>
 
+    <!-- Bookings Modal -->
+    <div id="bookings-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(44,62,80,0.7); z-index:1000; align-items:center; justify-content:center; overflow:auto;">
+        <div style="background:white; border-radius:10px; max-width:900px; width:90vw; margin:40px auto; padding:30px; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.2); max-height:90vh; overflow:auto;">
+            <button onclick="closeBookingsModal()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.5em; color:#8e44ad; cursor:pointer;">&times;</button>
+            <h2 style="margin-top:0; color:#8e44ad; text-align:center;">Pre-Bookings & Allotments</h2>
+            <div id="bookings-table-container" style="overflow-x:auto;"></div>
+        </div>
+    </div>
+
     <script>
         let currentData = null;
         
         function updateData() {
-            fetch('/api/data')
+    // Step 1: Trigger model update
+            fetch('/api/update')
+                .then(response => response.json())
+                .then(updateResponse => {
+                    if (updateResponse.status === 'success') {
+                        // Step 2: Once update is done, fetch fresh data
+                        return fetch('/api/data');
+                    } else {
+                        throw new Error(updateResponse.message || 'Update failed');
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
                         showError(data.error);
                         return;
                     }
-                    
                     currentData = data;
                     updateDashboard(data);
                 })
                 .catch(error => {
-                    console.error('Error fetching data:', error);
-                    showError('Failed to load data');
-                });
+                    console.error('Update error:', error);
+                    showError('Failed to update data: ' + error.message);
+            });
         }
+
         
         function updateDashboard(data) {
             // Update summary cards
-            document.getElementById('max-forecast').textContent = data.summary.max_forecast.toFixed(1);
-            document.getElementById('avg-forecast').textContent = data.summary.avg_forecast.toFixed(1);
-            document.getElementById('peak-hours-count').textContent = data.summary.peak_hours_count;
-            document.getElementById('grid-utilization').textContent = data.summary.grid_utilization.toFixed(1);
+            animateValue('max-forecast', 0, data.summary.max_forecast, 800);
+            animateValue('avg-forecast', 0, data.summary.avg_forecast, 800);
+            animateValue('peak-hours-count', 0, data.summary.peak_hours_count, 800);
+            animateValue('grid-utilization', 0, data.summary.grid_utilization, 800);
             
             // Update last update time
             document.getElementById('last-update').textContent = data.last_update || 'Unknown';
@@ -538,6 +609,55 @@
         
         // Auto-refresh every 5 minutes
         setInterval(updateData, 300000);
+
+        // Bookings Modal Logic
+        function showBookingsModal() {
+            document.getElementById('bookings-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent background scroll
+            fetchBookings();
+        }
+        function closeBookingsModal() {
+            document.getElementById('bookings-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        function fetchBookings() {
+            const container = document.getElementById('bookings-table-container');
+            container.innerHTML = '<div class="loading">Loading bookings...</div>';
+            fetch('/api/bookings')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.bookings || data.bookings.length === 0) {
+                        container.innerHTML = '<div style="color:#27ae60; font-weight:bold;">No bookings available.</div>';
+                        return;
+                    }
+                    let html = '<table style="width:100%; border-collapse:collapse;">';
+                    html += '<tr style="background:#8e44ad; color:white;">'
+                        +'<th>Vehicle ID</th>'
+                        +'<th>Station ID</th>'
+                        +'<th>Requested Start</th>'
+                        +'<th>Requested End</th>'
+                        +'<th>Required Charge (kWh)</th>'
+                        +'<th>Status</th>'
+                        +'<th>Allotted Times</th>'
+                        +'</tr>';
+                    data.bookings.forEach(b => {
+                        html += '<tr style="text-align:center; vertical-align:top;">'
+                            +`<td style="vertical-align:top;">${b.vehicle_id}</td>`
+                            +`<td style="vertical-align:top;">${b.station_id}</td>`
+                            +`<td style="vertical-align:top;">${b.requested_start}</td>`
+                            +`<td style="vertical-align:top;">${b.requested_end}</td>`
+                            +`<td style="vertical-align:top;">${b.required_charge}</td>`
+                            +`<td style="vertical-align:top;">${b.status.charAt(0).toUpperCase() + b.status.slice(1)}</td>`
+                            +`<td style="vertical-align:top;">${b.allotted_times && b.allotted_times.length > 0 ? b.allotted_times.join('<br>') : '-'}</td>`
+                            +'</tr>';
+                    });
+                    html += '</table>';
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    container.innerHTML = '<div class="error">Failed to load bookings.</div>';
+                });
+        }
     </script>
 </body>
 </html> 
