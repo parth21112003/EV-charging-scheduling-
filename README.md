@@ -43,7 +43,3 @@ python ev_charging_scheduler.py
 3. Sets dynamic thresholds based on grid capacity
 4. Generates optimized charging schedules
 5. Provides real-time recommendations for EV charging
-
-## License
-
-MIT License 
