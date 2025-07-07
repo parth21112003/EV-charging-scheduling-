@@ -9,7 +9,7 @@ def generate_synthetic_data(days=30, noise_level=0.2):
     Args:
         days (int): Number of days to generate data for
         noise_level (float): Amount of random noise to add
-        
+
     Returns:
         pd.DataFrame: DataFrame with timestamp and demand columns
     """
