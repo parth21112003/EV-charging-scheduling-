@@ -9,7 +9,7 @@ class PreBookingManager:
             'required_charge', 'status'
         ])
 
-    def generate_sample_pre_bookings(self, num_bookings=50, days_ahead=7):
+    def generate_sample_pre_bookings(self, num_bookings=120, days_ahead=7):
         """
         Generate sample pre-bookings for testing
         """
@@ -22,10 +22,8 @@ class PreBookingManager:
         
         for _ in range(num_bookings):
             # Random start time within the next 'days_ahead' days
-            start_time = current_time + timedelta(
-                days=random.randint(0, days_ahead),
-                hours=random.randint(0, 23)
-            )
+            start_time = current_time + timedelta(hours=random.randint(0, 23))
+
             
             # Random charging duration between 1 and 4 hours
             duration = random.randint(1, 4)
